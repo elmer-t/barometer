@@ -1,4 +1,16 @@
+
+
+
 class Font_5x5():
+	"""
+	Font_5x5 class provides a 5x5 pixel representation of characters for use in graphical displays.
+	Attributes:
+		width (int): The width of each character in pixels.
+		height (int): The height of each character in pixels.
+		characters (dict): A dictionary mapping characters to their 5x5 pixel representation.
+	Methods:
+		__init__(): Initializes the Font_5x5 class and populates the characters dictionary with 5x5 pixel representations of lower-case letters, upper-case letters, numbers, and special characters.
+	"""
 
 	width = 5
 	height = 5
