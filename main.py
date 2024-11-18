@@ -27,16 +27,16 @@ SCL  = Pin(1)
 # Initialize BMP280
 bus = I2C(0, scl=SCL, sda=SCA, freq=400000)
 bmp = BMP280(bus)
-bmp.use_case(BMP280_CASE_WEATHER)
+bmp.use_case(BMP280_CASE_INDOOR) # Note: in WEATHER mode, no more then 1 sample per minute is allowed!
 
 interrupt_flag = 0
 
 class States():
-	TEMP           = 1
-	PRESSURE       = 2
-	TEMP_PRESSURE  = 3
-	TEMP_GRAPH     = 4
-	PRESSURE_GRAPH = 5
+	#TEMP           = 1
+	#PRESSURE       = 2
+	TEMP_PRESSURE  = 1
+	TEMP_GRAPH     = 2
+	PRESSURE_GRAPH = 3
 
 # Set default state as startup
 state = States.TEMP_PRESSURE
@@ -54,7 +54,7 @@ def main():
 	print("Starting...")
 
 	count = 0
-	temp_history = []
+	temp_history  = []
 	press_history = []
 
 	if DEBUG:
@@ -79,7 +79,8 @@ def main():
 		current_press = int(bmp.pressure / 100)
 
 		# Save temperature and pressure to history every 10 minutes
-		if count % 600 == 0:
+		if count % 60 == 0:
+			
 			temp_history.append(current_temp)
 			if len(temp_history) > 128:
 				temp_history.pop(0) # remove first item
@@ -88,11 +89,13 @@ def main():
 			if len(press_history) > 128:
 				press_history.pop(0) # remove first item
 
-		if state == States.TEMP:
-			showState_TEMP(current_temp)
+			count = 0
 
-		if state == States.PRESSURE:
-			showState_PRESSURE(current_press)
+		# if state == States.TEMP:
+		# 	showState_TEMP(current_temp)
+
+		# if state == States.PRESSURE:
+		# 	showState_PRESSURE(current_press)
 
 		if state == States.TEMP_GRAPH:
 			showState_TEMP_GRAPH(temp_history)
@@ -117,10 +120,18 @@ def showState_PRESSURE_GRAPH(press_history):
 		OLED.pixel(i, 55 - int((press_history[i] - min_press) * scaler), OLED.white)
 
 	font = Font_5x5()
+
+	# Header row
 	printString(28, 0, "24h Pressure", font, 1, OLED.white)
-	OLED.line(0, 7, 128, 7, OLED.white)
-	OLED.line(0, 56, 128, 56, OLED.white)
+
+	# Footer row
 	printString(10, 59, "↓{:.0f}  →{:.0f}  ↑{:.0f}".format(min(press_history), press_history[-1], max(press_history)), font, 1, OLED.white)
+
+	# Header/footer lines
+	for x in range(128):
+		if x % 4 == 0:
+			OLED.pixel(x, 7, 1)
+			OLED.pixel(x, 56, 1)
 
 	OLED.show()
 
@@ -133,10 +144,18 @@ def showState_TEMP_GRAPH(temp_history):
 		OLED.pixel(i, 64 - int(temp_scaled), OLED.white)
 
 	font = Font_5x5()
+	# Header row
 	printString(19, 0, "24h Temperature", font, 1, OLED.white)
-	OLED.line(0, 7, 128, 7, OLED.white)
-	OLED.line(0, 56, 128, 56, OLED.white)
-	printString(22, 59, "↓{:.0f}  →{:.0f}  ↑{:.0f}".format(min(temp_history), temp_history[-1], max(temp_history)), font, 1, OLED.white)
+	
+	# Footer row
+	printString(4, 59, "↓{:.1f}  →{:.1f}  ↑{:.1f}".format(min(temp_history), temp_history[-1], max(temp_history)), font, 1, OLED.white)
+
+	# Header/footer lines
+	for x in range(128):
+		if x % 4 == 0:
+			OLED.pixel(x, 7, 1)
+			OLED.pixel(x, 56, 1)
+
 	OLED.show()
 
 def showState_TEMP_PRESSURE(temperature, pressure):
@@ -202,7 +221,7 @@ def keyA_pressed(pin):
 	global state
 
 	state += 1
-	if state > 5:
+	if state > 3:
 		state = 1
 	
 	saveStateToFlash(state)
@@ -212,7 +231,7 @@ def keyB_pressed(pin):
 
 	state -= 1
 	if state <= 0:
-		state = 5
+		state = 3
 
 	saveStateToFlash(state)
 
