@@ -31,6 +31,10 @@ bmp.use_case(BMP280_CASE_INDOOR) # Note: in WEATHER mode, no more then 1 sample 
 
 interrupt_flag = 0
 
+temp_history  = []
+press_history = []
+measure_interval = 135 # seconds. Enter 675 for 24h history, 135 for 4h history
+
 class States():
 	#TEMP           = 1
 	#PRESSURE       = 2
@@ -39,7 +43,7 @@ class States():
 	PRESSURE_GRAPH = 3
 
 # Set default state as startup
-state = States.TEMP_PRESSURE
+state = States.TEMP_GRAPH
 
 def splash():
 	clear()
@@ -48,38 +52,44 @@ def splash():
 	printString(10, 24, "BAROMETER", font, 2, OLED.white)
 	printString(12, 40, "→ Made by Birki ←", font, 1, OLED.white)
 	OLED.show()
-	
-def main():
-	
-	print("Starting...")
 
-	count = 0
-	temp_history  = []
+def dummy_data():
+	global temp_history, press_history
+
+	temp_history = []
 	press_history = []
 
-	if DEBUG:
-		# Fill temp_history with random values where the next value is +- 1 from the previous value
-		for i in range(128):
-			if i == 0:
-				temp_history.append(random.randint(15, 25))
-			else:
-				temp_history.append(temp_history[i-1] + random.choice([-2, 2]))
+	# Fill temp_history with random values where the next value is +- 1 from the previous value
+	for i in range(128):
+		if i == 0:
+			temp_history.append(15.0)
+		else:
+			temp_history.append(temp_history[i-1] + random.choice([-1, 1]))
 
-		# Fill press_history with random values where the next value is +- 1 from the previous value
-		for i in range(128):
-			if i == 0:
-				press_history.append(random.randint(970, 1040))
-			else:
-				press_history.append(press_history[i-1] + random.choice([-2, 2]))
+	# Fill press_history with random values where the next value is +- 1 from the previous value
+	for i in range(128):
+		if i == 0:
+			press_history.append(random.randint(970, 1040))
+		else:
+			press_history.append(press_history[i-1] + random.choice([-2, 2]))
+
+def main():
+	global temp_history, press_history
+
+	print("Starting...")
+	count = 0
 
 	while True:
+
+		if DEBUG:
+			dummy_data()
 
 		# Read temperature and pressure using BMP280 sensor
 		current_temp = bmp.temperature
 		current_press = int(bmp.pressure / 100)
 
 		# Save temperature and pressure to history every 10 minutes
-		if count % 60 == 0:
+		if DEBUG == False and count % measure_interval == 0:
 			
 			temp_history.append(current_temp)
 			if len(temp_history) > 128:
@@ -107,7 +117,7 @@ def main():
 			showState_TEMP_PRESSURE(current_temp, current_press)
 
 		count += 1
-		time.sleep(1)
+		time.sleep(1) # must be 1 or less for button interrupts to work
 
 def showState_PRESSURE_GRAPH(press_history):
 	clear()
@@ -127,34 +137,43 @@ def showState_PRESSURE_GRAPH(press_history):
 	# Footer row
 	printString(10, 59, "↓{:.0f}  →{:.0f}  ↑{:.0f}".format(min(press_history), press_history[-1], max(press_history)), font, 1, OLED.white)
 
-	# Header/footer lines
-	for x in range(128):
-		if x % 4 == 0:
-			OLED.pixel(x, 7, 1)
-			OLED.pixel(x, 56, 1)
-
+	dotted_line(7)
+	dotted_line(56)
 	OLED.show()
 
 def showState_TEMP_GRAPH(temp_history):
 	clear()
 
+	min_temp = min(temp_history)
+	max_temp = max(temp_history)
+
+	min_y = 9
+	max_y = 54
+	y_range = max_y - min_y
+	temp_range = max_temp - min_temp
+	if temp_range == 0:
+		temp_range = 1
+
 	for i in range(len(temp_history)):
-		# Scale the temp to values between 8 and 54
-		temp_scaled = (temp_history[i] * 48 / 42) + 8
-		OLED.pixel(i, 64 - int(temp_scaled), OLED.white)
+		
+		# Scale the temp to values between min_y and max_y
+		#temp_scaled = (temp_history[i] - min_temp) * (max_y - min_y) / (max_temp - min_temp) + min_y
+		temp_scaled = (temp_history[i] - min_temp) * y_range / temp_range + min_y
+
+		#OLED.pixel(i, 64 - int(temp_scaled), OLED.white)
+		OLED.line(i, max_y, i, 64 - int(temp_scaled), OLED.white)
 
 	font = Font_5x5()
+
+	time_range = int(128 * measure_interval / 60 / 60)
+
 	# Header row
-	printString(19, 0, "24h Temperature", font, 1, OLED.white)
+	printString(19, 0, str(time_range) + "h Temperature", font, 1, OLED.white)
+	dotted_line(7)
 	
 	# Footer row
 	printString(4, 59, "↓{:.1f}  →{:.1f}  ↑{:.1f}".format(min(temp_history), temp_history[-1], max(temp_history)), font, 1, OLED.white)
-
-	# Header/footer lines
-	for x in range(128):
-		if x % 4 == 0:
-			OLED.pixel(x, 7, 1)
-			OLED.pixel(x, 56, 1)
+	dotted_line(56)
 
 	OLED.show()
 
@@ -191,6 +210,13 @@ def showState_TEMP(temperature):
 	printString(95-((len(temp)+1) * 15), 24, temp, font, 3, OLED.white)
 	printString(95, 24, "°C", font, 1, OLED.white)
 	OLED.show()
+
+def dotted_line(y = 0):
+	# Header/footer lines
+	for x in range(128):
+		if x % 4 == 0:
+			OLED.pixel(x, y, 1)
+			OLED.pixel(x, y, 1)
 
 # Print a string to the OLED display
 # x, y: position on the display
