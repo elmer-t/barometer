@@ -28,13 +28,13 @@ bus = I2C(0, scl=SCL, sda=SCA, freq=400000)
 bmp = BMP280(bus)
 bmp.use_case(BMP280_CASE_INDOOR) # Note: in WEATHER mode, no more then 1 sample per minute is allowed!
 
-font             = Font_5x5()
-interrupt_flag   = 0		# Interrupt flag for button press
-temp_history     = []       # Temperature history
-press_history    = []       # Pressure history
-sample_int_secs  = 60       # Sample interval in seconds
-temp_calibration = -0.9     # Temperature calibration value
-pressure_calibration = 0    # Pressure calibration value
+font                 = Font_5x5()
+interrupt_flag       = 0     # Interrupt flag for button press
+temp_history         = []    # Temperature history
+press_history        = []    # Pressure history
+sample_int_secs      = 60    # Sample interval in seconds
+temp_calibration     = -0.9  # Temperature calibration value for this specific BMP280
+pressure_calibration = 0     # Pressure calibration value
 
 class DisplayModes():
 	TEMP_PRESSURE  = 1
@@ -48,6 +48,9 @@ display_mode = DisplayModes.TEMP_GRAPH
 hour_range = 0 # default to 4h
 
 def splash():
+	"""
+	Show the splash screen on the OLED display
+	"""
 	clear()
 
 	printString(10, 24, "BAROMETER", font, 2, OLED.white)
@@ -55,6 +58,9 @@ def splash():
 	OLED.show()
 
 def dummy_data():
+	"""
+	Fill the temperature and pressure history with dummy data
+	"""
 	global temp_history, press_history
 
 	print("Filling dummy data...")
@@ -82,6 +88,9 @@ def dummy_data():
 	# temp_history = [18.69, 18.68, 18.68, 18.68, 18.69, 18.68, 18.68, 18.71, 18.78, 18.84, 18.92, 19.0, 19.07, 19.14, 19.2, 19.25, 19.31, 19.32, 19.3, 19.36, 19.42, 19.38, 19.36, 19.39, 19.37, 19.36, 19.35, 19.35, 19.34, 19.34, 19.33, 19.32, 19.32, 19.3, 19.29, 19.28, 19.27, 19.26, 19.25, 19.26, 19.25, 19.26, 19.26, 19.26, 19.27, 19.26, 19.25, 19.25, 19.51, 19.5, 19.54, 19.54, 19.76, 19.78, 19.8, 21.22, 20.79, 20.73, 20.73, 20.7, 20.67, 20.63, 20.59, 20.55, 20.49, 20.44, 20.39, 20.34, 20.3, 20.25, 20.22, 20.18, 20.14, 20.1, 20.06, 20.03, 20.0, 19.96, 19.93, 19.9, 19.88, 19.85, 19.83, 19.81, 19.79, 19.77, 19.75, 19.72, 19.7, 19.68, 19.66, 19.63, 19.61, 19.6, 19.58, 19.57, 19.55, 19.53, 19.52, 19.5, 19.49, 19.47, 19.46, 19.45, 19.43, 19.42, 19.41, 19.4, 19.38, 19.37, 19.35, 19.35, 19.34, 19.32, 19.31, 19.3, 19.3, 19.28, 19.27, 19.25, 19.25, 19.24, 19.23, 19.23, 19.22, 19.21, 19.19, 19.19, 19.18, 19.17, 19.17, 19.16, 19.15, 19.15, 19.14, 19.13, 19.13, 19.13, 19.12, 19.11, 19.11, 19.11, 19.1, 19.09, 19.09, 19.08, 19.07, 19.06, 19.06, 19.06, 19.05, 19.04, 19.04, 19.03, 19.03, 19.02, 19.02, 19.02, 19.01, 19.0, 19.0, 18.99, 18.99, 18.98, 18.98, 18.98, 18.97, 18.96, 18.97, 18.96, 18.96, 18.96, 18.94, 18.94, 18.94, 18.94, 18.93, 18.93, 18.93, 18.93, 18.92, 18.92, 18.92, 18.92, 18.91, 18.91, 18.91, 18.92, 18.92, 18.91, 18.91, 18.9, 18.9, 18.9, 18.89, 18.89, 18.89, 18.88, 18.88, 18.88, 18.87, 18.88, 18.88, 18.88, 18.88, 18.88, 18.87, 18.86, 18.86, 18.87, 18.86, 18.86, 18.86, 18.85, 18.85, 18.85, 18.85, 18.85, 18.85, 18.85, 18.85, 18.84, 18.84, 18.84, 18.84, 18.84, 18.84, 18.83, 18.83, 18.83, 18.83, 18.83, 18.82, 18.83, 18.82, 18.82, 18.82, 18.82, 18.82, 18.81, 18.81, 18.81, 18.81]
 
 def main():
+	"""
+	Main loop
+	"""
 	global temp_history, press_history
 
 	print("Starting...")
@@ -126,6 +135,12 @@ def main():
 		time.sleep(1) # must be 1 or less for button interrupts to work
 
 def showState_GRAPH(history, title, show_decimals = False):
+	"""
+	Show the temperature or pressure graph on the OLED display
+	:param history: temperature or pressure history
+	:param title: title of the graph
+	:param show_decimals: show decimals in the footer
+	"""
 	clear()
 
 	min_y = 8
@@ -157,9 +172,9 @@ def showState_GRAPH(history, title, show_decimals = False):
 	if temp_range == 0:
 		temp_range = 1
 
-	for i in range(len(averaged_temp_history)):
-		temp_scaled = (averaged_temp_history[i] - min_temp) * y_range / temp_range + min_y
-		OLED.line(i+4, max_y, i+4, 64 - int(temp_scaled), OLED.white)
+	for key, value in enumerate(averaged_temp_history):
+		temp_scaled = (value - min_temp) * y_range / temp_range + min_y
+		OLED.line(key + 4, max_y, key + 4, 64 - int(temp_scaled), OLED.white)
 
 	# Header row
 	printString(19, 0, str(HourRanges[hour_range]) + "h " + title, font, 1, OLED.white)
@@ -188,6 +203,11 @@ def showState_GRAPH(history, title, show_decimals = False):
 	OLED.show()
 
 def showState_TEMP_PRESSURE(temperature, pressure):
+	"""
+	Show the current temperature and pressure on the OLED display
+	:param temperature: current temperature
+	:param pressure: current pressure
+	"""
 	clear()
 
 	temp = "{:.1f}".format(temperature, 1)
@@ -200,37 +220,48 @@ def showState_TEMP_PRESSURE(temperature, pressure):
 	printString(95, 34, "hPa", font, 1, OLED.white)
 	OLED.show()
 
-# Print a horizontal dotted line
 def hor_dotted_line(y = 0):
+	"""
+	Print a horizontal dotted line
+	:param y: y position
+	"""
 	for x in range(127):
 		if x % 4 == 0:
 			OLED.pixel(x, y, 1)
 			OLED.pixel(x, y, 1)
 
-# Print a vertical dotted line
 def vert_dotted_line(x = 0):
+	"""
+	Print a vertical dotted line
+	:param x: x position
+	"""
 	for y in range(51):
 		if y % 10 == 0:
 			OLED.pixel(x, y+6, 1)
 			OLED.pixel(x, y+6, 1)
 
-# Print a string to the OLED display
-# x, y: position on the display
-# string: string to print
-# font: font to use
-# size: size of the characters
-# color: color of the characters
-def printString(x, y, string, font, size, color):
-	for i in range(len(string)):
-		printChar(x + i * 6 * size, y, font.characters[string[i]], size, color)
+def printString(x, y, text, font, size, color):
+	"""
+	Print a string to the OLED display
+	:param x: x position
+	:param y: y position
+	:param text: text to print
+	:param font: font to use
+	:param size: size of the characters
+	:param color: color of the characters
+	"""
+	for idx, char in enumerate(text):
+		printChar(x + idx * 6 * size, y, font.characters[char], size, color)
 
-
-# Print a character to the OLED display
-# x, y: position on the display
-# char: character to print
-# size: size of the character
-# color: color of the character
 def printChar(x, y, char, size, color):
+	"""
+	Print a character to the OLED display
+	:param x: x position
+	:param y: y position
+	:param char: character to print
+	:param size: size of the character
+	:param color: color of the character
+	"""
 
 	for i in range(len(char)): # height
 		for j in range(len(char[i])): # width
@@ -240,6 +271,10 @@ def printChar(x, y, char, size, color):
 				OLED.fill_rect(x + j * size, y + i * size, size, size, OLED.black)
 
 def key_0_pressed(pin):
+	"""
+	Interrupt handler for key 0
+	:param pin: pin that triggered the interrupt
+	"""
 	global display_mode
 
 	display_mode += 1
@@ -247,6 +282,10 @@ def key_0_pressed(pin):
 		display_mode = 1
 
 def key_1_pressed(pin):
+	"""
+	Interrupt handler for key 1
+	:param pin: pin that triggered the interrupt
+	"""
 	global hour_range
 
 	hour_range += 1
@@ -254,6 +293,9 @@ def key_1_pressed(pin):
 		hour_range = 0
 
 def clear():
+	"""
+	Clear the OLED display
+	"""
 	OLED.fill(0x0000)
 
 if __name__=='__main__':
